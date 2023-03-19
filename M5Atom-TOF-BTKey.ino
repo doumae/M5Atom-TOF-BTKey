@@ -1,5 +1,6 @@
 #include <M5Atom.h>
 #include <Adafruit_VL53L0X.h>
+#include <BleKeyboard.h>
 
 #define STATE_INIT    0
 #define STATE_FAR     1
@@ -7,19 +8,39 @@
 #define STATE_CLOSE   3
 #define STATE_AWAY    4
 
-#define STATE_HOLD    3           // TICK * HOLD times
+#define LED_OFF       0x000000
+#define LED_INIT      0x110000  // RED
+#define LED_FAR       0x0000FF  // BLUE
+#define LED_APPROCH   0xFF00FF
+#define LED_CLOSE     0x00FF00  // GREEN
+#define LED_AWAY      0xFFFF00
+
+#define STATE_HOLD    5           // TICK * HOLD times
 #define THRESHOLD_DISTANCE  1500  // mm
 #define TICK_MS       100         // ms
 
+#define BLEKEY_DEVICENAME "M5Atom KBD 1"
+#define BLEKEY_ON   '1'
+#define BLEKEY_OFF  '0'
 
-
-Adafruit_VL53L0X lox = Adafruit_VL53L0X();
+Adafruit_VL53L0X lox;
+BleKeyboard bleKeyboard(BLEKEY_DEVICENAME);
 
 int state;
 int state_count;
 int last_millis;
 
-int led_flag;
+int blink_flag;
+
+void led(unsigned int color) {
+  M5.dis.drawpix(0, color);
+}
+
+void key(char key){
+  if(bleKeyboard.isConnected()){
+    bleKeyboard.write(key);
+  }
+}
 
 void setup() {
 
@@ -36,9 +57,13 @@ void setup() {
   lox.startRangeContinuous(100);
   Serial.println("Init VL53L0X");
 
+  bleKeyboard.begin();
+  Serial.println("Start BLE Keyboard");
+
 
   state = STATE_INIT;
   state_count = 0;
+  blink_flag = false;
 
   last_millis = millis();
 
@@ -46,7 +71,7 @@ void setup() {
 }
 
 void loop() {
-  
+
 
   int sensor_distance;
   while (! lox.isRangeComplete()) {
@@ -54,12 +79,12 @@ void loop() {
   }
   sensor_distance = lox.readRange();
 
-/*
-  Serial.print("State: ");
-  Serial.print(state);
-  Serial.print(" Distance: ");
-  Serial.println(sensor_distance);
-*/
+  /*
+    Serial.print("State: ");
+    Serial.print(state);
+    Serial.print(" Distance: ");
+    Serial.println(sensor_distance);
+  */
 
   switch (state) {
 
@@ -98,6 +123,7 @@ void loop() {
 
           // SEND KEY
           Serial.println("SEND KEY ON");
+          key(BLEKEY_ON);
 
         }
       }
@@ -133,6 +159,7 @@ void loop() {
 
           // SEND KEY
           Serial.println("SEND KEY OFF");
+          key(BLEKEY_OFF);
 
         }
 
@@ -141,7 +168,28 @@ void loop() {
 
   }
 
-
+  if (blink_flag) {
+    switch (state) {
+      case STATE_FAR:
+        led(LED_FAR);
+        break;
+      case STATE_APPROCH:
+        led(LED_APPROCH);
+        break;
+      case STATE_CLOSE:
+        led(LED_CLOSE);
+        break;
+      case STATE_AWAY:
+        led(LED_AWAY);
+        break;
+      default:
+        led(LED_INIT);
+        break;
+    }
+  } else {
+    led(LED_OFF);
+  }
+  blink_flag = ! blink_flag;
 
   while ((millis() - last_millis) < TICK_MS) {
     delay(10);
