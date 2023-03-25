@@ -2,22 +2,25 @@
 #include <Adafruit_VL53L0X.h>
 #include <BleKeyboard.h>
 
-#define STATE_INIT    0
-#define STATE_FAR     1
-#define STATE_APPROCH 2
-#define STATE_CLOSE   3
-#define STATE_AWAY    4
+#define STATE_INIT        0
+#define STATE_FAR         1
+#define STATE_APPROCH     2
+#define STATE_CLOSE_HOLD  3
+#define STATE_CLOSE       4
+#define STATE_AWAY        5
 
-#define LED_OFF       0x000000
-#define LED_INIT      0x110000  // RED
-#define LED_FAR       0x0000FF  // BLUE
-#define LED_APPROCH   0xFF00FF
-#define LED_CLOSE     0x00FF00  // GREEN
-#define LED_AWAY      0xFFFF00
+#define LED_OFF         0x000000
+#define LED_INIT        0x110000  // RED
+#define LED_FAR         0x0000FF  // BLUE
+#define LED_APPROCH     0xFF00FF
+#define LED_CLOSE_HOLD  0x00FF00  // GREEN
+#define LED_CLOSE       0x00FF00  // GREEN
+#define LED_AWAY        0xFFFF00
 
-#define STATE_HOLD    5           // TICK * HOLD times
 #define THRESHOLD_DISTANCE  1500  // mm
-#define TICK_MS       100         // ms
+#define STATE_HOLD_TICK     5     // TICK * HOLD times
+#define CLOSE_HOLD_TICK     50    // TICK * HOLD times
+#define TICK_MS             100   // ms
 
 #define BLEKEY_DEVICENAME "M5Atom KBD 1"
 #define BLEKEY_ON   '1'
@@ -99,7 +102,7 @@ void loop() {
 
         Serial.println("STATE ===> APPROCH");
         state = STATE_APPROCH;
-        state_count = STATE_HOLD;
+        state_count = STATE_HOLD_TICK;
 
       }
       break;
@@ -117,9 +120,9 @@ void loop() {
         state_count --;
         if (state_count < 1) {
 
-          Serial.println("STATE ===> CLOSE");
-          state = STATE_CLOSE;
-          state_count = 0;
+          Serial.println("STATE ===> CLOSE_HOLD");
+          state = STATE_CLOSE_HOLD;
+          state_count = CLOSE_HOLD_TICK;
 
           // SEND KEY
           Serial.println("SEND KEY ON");
@@ -129,13 +132,23 @@ void loop() {
       }
       break;
 
+    case STATE_CLOSE_HOLD:
+
+      state_count --;
+      if (state_count < 1) {
+        Serial.println("STATE ===> CLOSE");
+        state = STATE_CLOSE;
+        state_count = 0;
+      }
+      break;
+
     case STATE_CLOSE:
 
       if (sensor_distance > THRESHOLD_DISTANCE) {
 
         Serial.println("STATE ===> AWAY");
         state = STATE_AWAY;
-        state_count = STATE_HOLD;
+        state_count = STATE_HOLD_TICK;
 
       }
       break;
@@ -178,6 +191,9 @@ void loop() {
         break;
       case STATE_CLOSE:
         led(LED_CLOSE);
+        break;
+      case STATE_CLOSE_HOLD:
+        led(LED_CLOSE_HOLD);
         break;
       case STATE_AWAY:
         led(LED_AWAY);
