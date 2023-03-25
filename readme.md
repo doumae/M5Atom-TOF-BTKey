@@ -49,6 +49,11 @@
 - Arduino IDEをインストールして、M5Atomの開発環境を整えてください
   - https://docs.m5stack.com/en/quick_start/atom/arduino
 
+- Adafruit_VL53L0Xをインストールしてください
+  - Arduino IDE -> ツール -> ライブラリマネージャ
+  - "Adafruit_VL53L0X"を検索してインストール
+  - 参考: https://github.com/adafruit/Adafruit_VL53L0X
+
 - NimBLEをインストールしてください
   - Arduino IDE -> ツール -> ライブラリマネージャ
   - "NimBLE"を検索してインストール
